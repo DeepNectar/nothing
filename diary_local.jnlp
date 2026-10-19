@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    LOCAL version of the Personal Diary JNLP launcher.
+
+    FIXES for "Unable to open application / Failed to launch":
+      1. codebase now points to a LOCAL folder (file://) instead of
+         https://example.com/ which does not exist -> download error.
+      2. href matches this file's actual name (diary_local.jnlp).
+      3. jar name points to the real built jar: personal-diary.jar
+
+    >>> EDIT THE PATH BELOW to where your jar actually is, e.g.
+        Windows:  <jnlp spec="1.0+" codebase="file:///C:/PersonalDiary/" ...>
+        Linux/Mac: <jnlp spec="1.0+" codebase="file:///home/YOU/PersonalDiary/" ...>
+
+    STORAGE ADVICE: keep diary_local.jnlp and personal-diary.jar together
+    in one app folder (e.g. C:\PersonalDiary\ or ~/PersonalDiary/).
+    Your diary entries are saved separately in ~/PersonalDiaryData/.
+-->
+<jnlp spec="1.0+" codebase="file:///home/YOU/PersonalDiary/" href="diary_local.jnlp">
+
+    <information>
+        <title>Personal Diary</title>
+        <vendor>DiarySoft</vendor>
+        <description kind="short">Write your daily entries on a virtual A4 paper page.</description>
+        <description>Personal diary writing application with an A4-size (210x297 mm)
+            paper view, ruled-line editor, per-day entries, autosave, and
+            one-click A4 PDF/print export.</description>
+        <offline-supported/>
+    </information>
+
+    <security>
+        <all-permissions/>
+    </security>
+
+    <resources>
+        <!-- Adjust the Java version to what you have installed -->
+        <j2se version="1.8+" initial-heap-size="64m" max-heap-size="512m"/>
+        <!-- Main application jar; MUST be signed if using all-permissions -->
+        <jar href="personal-diary.jar" main="true"/>
+    </resources>
+
+    <application-desc main-class="com.diarysoft.personaldiary.DiaryApp">
+        <argument>--paper=A4</argument>
+        <argument>--ruled-lines=true</argument>
+        <argument>--autosave=true</argument>
+    </application-desc>
+
+    <update check="background" policy="always"/>
+</jnlp>

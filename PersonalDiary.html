@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personal Diary - A4</title>
+<style>
+  :root {
+    --paper-w: 210mm;
+    --paper-h: 297mm;
+    --line-color: #b8d0e8;
+    --margin-line: #f0b6b6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #eceff3;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #333;
+  }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    background: #ffffff; padding: 10px 16px;
+    border-bottom: 1px solid #d7dce2;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+  .toolbar h1 { font-size: 16px; margin: 0 12px 0 0; white-space: nowrap; }
+  .toolbar input[type="date"] {
+    padding: 5px 8px; border: 1px solid #c3cad3; border-radius: 6px; font-size: 14px;
+  }
+  .toolbar button, .toolbar select {
+    padding: 6px 12px; border: 1px solid #c3cad3; border-radius: 6px;
+    background: #f6f8fa; font-size: 13px; cursor: pointer;
+  }
+  .toolbar button:hover { background: #e8eef5; }
+  .toolbar .primary { background: #2f6fb2; color: #fff; border-color: #2f6fb2; }
+  .toolbar .primary:hover { background: #275d96; }
+  #status { margin-left: auto; font-size: 12px; color: #6a7684; }
+
+  /* ---------- Workspace ---------- */
+  .workspace { display: flex; justify-content: center; padding: 24px 10px 60px; }
+
+  /* ---------- A4 Paper (210mm x 297mm) ---------- */
+  .paper {
+    width: var(--paper-w);
+    min-height: var(--paper-h);
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,.18);
+    padding: 25mm 20mm 20mm 25mm;   /* like a real notebook margin */
+    position: relative;
+  }
+  .paper.ruled {
+    background-image:
+      repeating-linear-gradient(to bottom,
+        transparent 0, transparent calc(9mm - 1px),
+        var(--line-color) calc(9mm - 1px), var(--line-color) 9mm);
+    background-position: 0 12mm;
+  }
+  .paper::before {           /* red margin line */
+    content: ""; position: absolute; top: 0; bottom: 0; left: 20mm;
+    border-left: 1px solid var(--margin-line);
+  }
+  .entry-title {
+    font-size: 18px; font-weight: 600; color: #2f6fb2;
+    margin: 0 0 6mm 0; outline: none;
+  }
+  .entry-body {
+    min-height: 200mm; outline: none;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 14pt; line-height: 9mm;   /* matches ruled lines */
+    white-space: pre-wrap; word-wrap: break-word;
+  }
+  .entry-body:empty::before {
+    content: attr(data-placeholder); color: #aab4bf;
+  }
+
+  /* ---------- Entry list panel ---------- */
+  .sidebar {
+    width: 240px; padding: 16px; background:#fff; margin-right: 16px;
+    border: 1px solid #d7dce2; border-radius: 8px; height: fit-content;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .sidebar h2 { font-size: 14px; margin: 0 0 10px; }
+  .sidebar li {
+    list-style: none; padding: 6px 8px; border-radius: 6px;
+    cursor: pointer; font-size: 13px;
+  }
+  .sidebar li:hover { background: #eaf1f8; }
+  .sidebar li.active { background: #d6e6f5; font-weight: 600; }
+  .sidebar ul { margin: 0; padding: 0; }
+
+  /* ---------- Print: only the paper ---------- */
+  @media print {
+    .toolbar, .sidebar { display: none !important; }
+    body { background: #fff; }
+    .workspace { padding: 0; }
+    .paper { box-shadow: none; width: 100%; min-height: auto; }
+  }
+  @page { size: A4; margin: 0; }
+
+  /* On small screens just let the paper shrink */
+  @media (max-width: 850px) {
+    .sidebar { display: none; }
+    .paper { width: 100%; min-height: auto; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <h1>&#128211; Personal Diary</h1>
+    <input type="date" id="datePicker">
+    <select id="fontSel" title="Font size">
+      <option value="12">12pt</option>
+      <option value="14" selected>14pt</option>
+      <option value="16">16pt</option>
+      <option value="18">18pt</option>
+    </select>
+    <button id="ruledBtn">&#8213; Ruled lines</button>
+    <button id="saveBtn" class="primary">&#128190; Save</button>
+    <button onclick="window.print()">&#128424; Print / PDF</button>
+    <button id="delBtn">&#128465; Delete</button>
+    <span id="status">Ready</span>
+  </div>
+
+  <div class="workspace">
+    <div class="sidebar">
+      <h2>&#128193; My Entries</h2>
+      <ul id="entryList"></ul>
+    </div>
+
+    <div class="paper ruled" id="paper">
+      <div class="entry-title" id="entryTitle" contenteditable="true" spellcheck="false"></div>
+      <div class="entry-body" id="entryBody" contenteditable="true"
+           data-placeholder="Dear diary... start writing your day here."></div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const STORE_KEY = "personal-diary-entries";
+  const $ = id => document.getElementById(id);
+  const datePicker = $("datePicker"), entryTitle = $("entryTitle"),
+        entryBody = $("entryBody"), entryList = $("entryList"), status = $("status");
+
+  const today = () => {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  };
+
+  function loadAll()  { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch(e){ return {}; } }
+  function saveAll(a){ localStorage.setItem(STORE_KEY, JSON.stringify(a)); }
+
+  function setStatus(t){ status.textContent = t; setTimeout(()=>{ if(status.textContent===t) status.textContent="Saved \u2713 " + new Date().toLocaleTimeString(); }, 1500); }
+
+  function renderList(activeDate) {
+    const all = loadAll();
+    entryList.innerHTML = "";
+    Object.keys(all).sort().reverse().forEach(date => {
+      const li = document.createElement("li");
+      li.textContent = date + (all[date].title ? " \u2013 " + all[date].title : "");
+      li.dataset.date = date;
+      if (date === activeDate) li.classList.add("active");
+      li.onclick = () => openDate(date);
+      entryList.appendChild(li);
+    });
+  }
+
+  function currentData() {
+    return { title: entryTitle.innerText.trim(), body: entryBody.innerHTML, text: entryBody.innerText, updated: new Date().toISOString() };
+  }
+
+  function saveCurrent(silent) {
+    const date = datePicker.value || today();
+    const all = loadAll();
+    const d = currentData();
+    if (!d.title && !d.text.trim()) { delete all[date]; } else { all[date] = d; }
+    saveAll(all);
+    renderList(date);
+    if (!silent) setStatus("Saved " + date);
+  }
+
+  function openDate(date) {
+    datePicker.value = date;
+    const e = loadAll()[date];
+    if (e) {
+      entryTitle.innerText = e.title || "";
+      entryBody.innerHTML = e.body || "";
+    } else {
+      entryTitle.innerText = new Date(date + "T00:00:00").toDateString();
+      entryBody.innerHTML = "";
+    }
+    renderList(date);
+    entryBody.focus();
+  }
+
+  // ---- events ----
+  datePicker.addEventListener("change", () => { saveCurrent(true); openDate(datePicker.value); });
+  $("saveBtn").onclick = () => saveCurrent();
+  $("delBtn").onclick = () => {
+    const date = datePicker.value;
+    if (confirm("Delete entry for " + date + "?")) {
+      const all = loadAll(); delete all[date]; saveAll(all);
+      entryTitle.innerText = ""; entryBody.innerHTML = "";
+      renderList(null); setStatus("Deleted " + date);
+    }
+  };
+  $("ruledBtn").onclick = () => $("paper").classList.toggle("ruled");
+  $("fontSel").onchange = e => entryBody.style.fontSize = e.target.value + "pt";
+
+  // autosave every 5s while typing
+  let dirty = false;
+  [entryTitle, entryBody].forEach(el => el.addEventListener("input", () => dirty = true));
+  setInterval(() => { if (dirty) { saveCurrent(true); dirty = false; setStatus("Auto-saved"); } }, 5000);
+  window.addEventListener("beforeunload", () => { if (dirty) saveCurrent(true); });
+
+  // Ctrl+S
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveCurrent(); }
+  });
+
+  // init
+  const all = loadAll();
+  const first = today();
+  openDate(all[first] ? first : (Object.keys(all).sort().pop() || first));
+})();
+</script>
+</body>
+</html>

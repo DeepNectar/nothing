@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    JNLP (Java Network Launch Protocol) launcher for "Personal Diary".
+
+    A personal diary writing application whose editor is rendered as an
+    A4-size paper page (210 mm x 297 mm), with ruled lines, date header,
+    autosave, and PDF/print export at true A4 dimensions.
+
+    Usage:
+        1. Host this file on a web server that serves it with the MIME type
+           "application/x-java-jnlp-file".
+        2. Place a link to it on your website, or open it locally with:
+               javaws application.jnlp
+           (or double-click the .jnlp file if JNLP file association is set up)
+        3. Adjust the <information>, <resources>, and <application-desc>
+           sections to match your application.
+-->
+<jnlp spec="1.0+" codebase="https://example.com/diary/" href="diary.jnlp">
+
+    <!-- Basic application metadata -->
+    <information>
+        <title>Personal Diary</title>
+        <vendor>DiarySoft</vendor>
+        <homepage href="https://example.com/diary/"/>
+        <description kind="short">Write your daily entries on a virtual A4 paper page.</description>
+        <description>Personal diary writing application with an A4-size (210x297 mm)
+            paper view, ruled-line editor, per-day entries, autosave, and
+            one-click A4 PDF/print export.</description>
+        <icon href="images/diary-icon.png" kind="default"/>
+        <icon href="images/diary-splash.png" kind="splash"/>
+        <offline-supported/>
+    </information>
+
+    <!-- Security: leave empty if all JARs are signed; add permissions for sandbox -->
+    <security>
+        <all-permissions/>
+    </security>
+
+    <!-- Runtime environment and resources -->
+    <resources>
+        <!-- Require Java 8 or newer; heap sized for smooth page rendering -->
+        <j2se version="1.8+" href="http://java.sun.com/products/autodl/j2se"
+              initial-heap-size="64m" max-heap-size="512m"/>
+
+        <!-- Application JAR(s); the one with main="true" contains the entry point -->
+        <jar href="lib/personal-diary.jar" main="true" download="eager"/>
+        <jar href="lib/pdf-export.jar" download="eager"/>   <!-- A4 PDF/print export -->
+
+        <!-- Optional native libraries (must be signed alongside the JARs) -->
+        <!--
+        <j2se version="1.8+"/>
+        <nativelib href="lib/native-windows.jar" os="windows"/>
+        <nativelib href="lib/native-linux.jar"   os="linux"/>
+        <nativelib href="lib/native-macosx.jar"  os="macosx"/>
+        -->
+
+        <!-- Property passed to the app: paper size for the editor view -->
+        <property name="diary.paper.size" value="A4"/>          <!-- 210mm x 297mm -->
+        <property name="diary.data.dir"   value="${user.home}/PersonalDiary"/>
+    </resources>
+
+    <!-- Application launch descriptor -->
+    <application-desc main-class="com.diarysoft.personaldiary.DiaryApp">
+        <!-- Arguments read by the app to configure the A4 paper view -->
+        <argument>--paper=A4</argument>       <!-- fixed A4 page, 210 x 297 mm -->
+        <argument>--ruled-lines=true</argument>
+        <argument>--autosave=true</argument>
+    </application-desc>
+    <!-- Optional: add an argument to open a past entry on launch,
+         e.g. the date flag for 16 October 2026 -->
+
+    <!--
+        Alternative: launch as an applet instead of an application.
+        Uncomment the block below and remove <application-desc> to use it.
+
+    <applet-desc name="DiaryApplet" main-class="com.diarysoft.personaldiary.DiaryApplet"
+                 width="794" height="1123">
+        <param name="paper" value="A4"/>
+    </applet-desc>
+    -->
+
+    <!--
+        Update behavior: diary data is stored locally, so check for
+        updates in the background and never block writing offline.
+    -->
+    <update check="background" policy="prompt-run"/>
+</jnlp>
